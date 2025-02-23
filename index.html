@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Simple To-Do List App</title>
+  <title>Enhanced To-Do List App</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -22,14 +22,20 @@
       border-radius: 8px;
       box-shadow: 0 0 10px rgba(0,0,0,0.1);
       width: 100%;
-      max-width: 500px;
+      max-width: 600px;
     }
-    #new-task {
-      width: 80%;
+    .input-group {
+      margin-bottom: 10px;
+    }
+    input[type="text"],
+    input[type="datetime-local"],
+    input[type="file"] {
       padding: 10px;
       font-size: 16px;
       border: 1px solid #ddd;
       border-radius: 4px;
+      width: calc(100% - 22px);
+      margin-top: 5px;
     }
     #add-task-btn {
       padding: 10px 15px;
@@ -39,7 +45,7 @@
       color: #fff;
       border-radius: 4px;
       cursor: pointer;
-      margin-left: 10px;
+      margin-top: 10px;
     }
     #task-list {
       list-style: none;
@@ -48,8 +54,7 @@
     }
     .task-item {
       display: flex;
-      align-items: center;
-      justify-content: space-between;
+      flex-direction: column;
       padding: 10px;
       border-bottom: 1px solid #eee;
     }
@@ -57,12 +62,23 @@
       text-decoration: line-through;
       color: #777;
     }
+    .task-details {
+      margin-bottom: 8px;
+    }
     .task-text {
-      flex: 1;
+      font-size: 18px;
       cursor: pointer;
     }
+    .task-deadline {
+      font-size: 12px;
+      color: #555;
+      margin-top: 5px;
+    }
+    .task-actions {
+      margin-top: 5px;
+    }
     .task-actions button {
-      margin-left: 5px;
+      margin-right: 5px;
       padding: 5px 10px;
       border: none;
       border-radius: 4px;
@@ -98,12 +114,21 @@
   </style>
 </head>
 <body>
-  <h1>To-Do List</h1>
+  <h1>Enhanced To-Do List</h1>
   <div id="todo-container">
-    <div>
+    <div class="input-group">
+      <label for="new-task">Task:</label>
       <input type="text" id="new-task" placeholder="Add new task...">
-      <button id="add-task-btn">Add Task</button>
     </div>
+    <div class="input-group">
+      <label for="task-deadline">Deadline:</label>
+      <input type="datetime-local" id="task-deadline">
+    </div>
+    <div class="input-group">
+      <label for="task-image">Upload Image:</label>
+      <input type="file" id="task-image" accept="image/*">
+    </div>
+    <button id="add-task-btn">Add Task</button>
     <ul id="task-list"></ul>
     <button id="delete-all-btn">Delete All Tasks</button>
   </div>
@@ -114,15 +139,43 @@
     const taskList = document.getElementById('task-list');
     const deleteAllBtn = document.getElementById('delete-all-btn');
 
-    function createTaskElement(taskText) {
+    // Create a new task element with optional deadline and image
+    function createTaskElement(taskText, deadline, imageData) {
       const li = document.createElement('li');
       li.className = 'task-item';
 
+      // Create container for task details (text, deadline, image)
+      const detailsDiv = document.createElement('div');
+      detailsDiv.className = 'task-details';
+
+      // Task text
       const span = document.createElement('span');
       span.className = 'task-text';
       span.textContent = taskText;
-      li.appendChild(span);
+      detailsDiv.appendChild(span);
 
+      // Deadline display, if provided
+      if (deadline) {
+        const deadlineSpan = document.createElement('span');
+        deadlineSpan.className = 'task-deadline';
+        deadlineSpan.textContent = "Due: " + new Date(deadline).toLocaleString();
+        detailsDiv.appendChild(deadlineSpan);
+      }
+
+      // Image preview, if provided
+      if (imageData) {
+        const img = document.createElement('img');
+        img.src = imageData;
+        img.alt = 'Task image';
+        img.style.maxWidth = '100px';
+        img.style.display = 'block';
+        img.style.marginTop = '5px';
+        detailsDiv.appendChild(img);
+      }
+
+      li.appendChild(detailsDiv);
+
+      // Create container for task actions
       const actionsDiv = document.createElement('div');
       actionsDiv.className = 'task-actions';
 
@@ -158,7 +211,7 @@
         }
       });
 
-      // Edit task
+      // Edit task text (only editing the task text for simplicity)
       editBtn.addEventListener('click', function() {
         const newText = prompt('Edit task:', span.textContent);
         if(newText !== null && newText.trim() !== '') {
@@ -176,17 +229,40 @@
       return li;
     }
 
-    // Add new task
+    // Add new task event listener
     addTaskBtn.addEventListener('click', function() {
       const taskText = newTaskInput.value.trim();
+      const deadline = document.getElementById('task-deadline').value;
+      const fileInput = document.getElementById('task-image');
+      
       if(taskText !== '') {
-        const taskElement = createTaskElement(taskText);
-        taskList.appendChild(taskElement);
-        newTaskInput.value = '';
-        newTaskInput.focus();
+        // If an image is selected, read it as Data URL
+        if(fileInput.files && fileInput.files[0]) {
+          const reader = new FileReader();
+          reader.onload = function(e) {
+            const imageData = e.target.result;
+            const taskElement = createTaskElement(taskText, deadline, imageData);
+            taskList.appendChild(taskElement);
+            // Clear inputs
+            newTaskInput.value = '';
+            document.getElementById('task-deadline').value = '';
+            fileInput.value = '';
+            newTaskInput.focus();
+          }
+          reader.readAsDataURL(fileInput.files[0]);
+        } else {
+          const taskElement = createTaskElement(taskText, deadline, null);
+          taskList.appendChild(taskElement);
+          // Clear inputs
+          newTaskInput.value = '';
+          document.getElementById('task-deadline').value = '';
+          fileInput.value = '';
+          newTaskInput.focus();
+        }
       }
     });
 
+    // Allow pressing Enter in the task input to add a task
     newTaskInput.addEventListener('keyup', function(event) {
       if(event.key === 'Enter') {
         addTaskBtn.click();
